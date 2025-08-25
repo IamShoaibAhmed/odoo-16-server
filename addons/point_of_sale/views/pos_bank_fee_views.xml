@@ -1,0 +1,26 @@
+<odoo>
+    <record id="view_pos_bank_fee_tree" model="ir.ui.view">
+        <field name="name">pos.bank.fee.tree</field>
+        <field name="model">pos.order</field>
+        <field name="arch" type="xml">
+            <tree string="POS Bank Fees">
+                <field name="name"/>
+                <field name="session_id"/>
+                <field name="amount_total"/>
+                <field name="bank_fee"/>
+            </tree>
+        </field>
+    </record>
+
+<!--    <menuitem id="menu_pos_bank_fee_root" name="Bank Fees" parent="point_of_sale.menu_point_root" sequence="60"/>-->
+
+<!--    <record id="action_pos_bank_fee" model="ir.actions.act_window">-->
+<!--        <field name="name">Bank Fees</field>-->
+<!--        <field name="res_model">pos.order</field>-->
+<!--        <field name="view_mode">tree</field>-->
+<!--    </record>-->
+
+<!--    <menuitem id="menu_pos_bank_fee" name="Bank Fee Records"-->
+<!--              parent="menu_pos_bank_fee_root"-->
+<!--              action="action_pos_bank_fee" sequence="10"/>-->
+</odoo>
