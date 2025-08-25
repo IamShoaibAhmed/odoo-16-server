@@ -21,9 +21,7 @@
                     <div><t t-esc="receipt.outlet_address.street2"/></div>
                 </t>
                  <t t-if="receipt.outlet_address.city">
-                    <div><t t-esc="receipt.outlet_address.city"/>
-                        <t t-esc="receipt.outlet_address.zip"/>
-                        <t t-esc="receipt.outlet_address.country_id.name"/></div>
+                    <div><t t-esc="receipt.outlet_address.city"/></div>
                 </t>
                  <t t-if="receipt.company.email">
                     <div><t t-esc="receipt.company.email" /></div>
