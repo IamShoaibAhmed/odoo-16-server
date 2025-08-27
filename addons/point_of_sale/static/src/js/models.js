@@ -221,7 +221,7 @@ class PosGlobalState extends PosModel {
             const location = await this.env.services.rpc({
                 model: 'stock.location',
                 method: 'read',
-                args: [[locationId], ['street', 'street2', 'zip', 'city', 'state_id', 'country_id']],
+                args: [[locationId], ['street', 'street2', 'zip', 'city', 'state_id', 'country_id', 'phone_number']],
             });
             if (location[0]) {
                 return {
@@ -231,6 +231,7 @@ class PosGlobalState extends PosModel {
                     city: location[0].city || '',
                     state_id: location[0].state_id || null,
                     country_id: location[0].country_id || null,
+                    phone_number: location[0].phone_number || ''
                 };
             }
             return null;
@@ -2790,6 +2791,7 @@ class Order extends PosModel {
             city: '',
             state_id: null,
             country_id: null,
+            phone_number: ''
         };
         let date    = new Date();
 
@@ -2810,7 +2812,7 @@ class Order extends PosModel {
                 return qweb.render('subreceipt',{'pos':self.pos,'order':self, 'receipt': receipt}) ;
             }
         }
-        console.log('<<<<<<<<<<<<<location>>>>>>>>>>>>:', this.pos.default_location_src_id);
+
         var receipt = {
             orderlines: orderlines,
             paymentlines: paymentlines,
