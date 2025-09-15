@@ -915,7 +915,6 @@ class PosOrder(models.Model):
         :type draft: bool.
         :Returns: list -- list of db-ids for the created and updated orders.
         """
-        print("triggered create_from_ui")
         order_names = [order['data']['name'] for order in orders]
         sync_token = randrange(100000000)  # Use to differentiate 2 parallels calls to this function in the logs
         _logger.info("Start PoS synchronisation #%d for PoS orders references: %s (draft: %s)", sync_token, order_names, draft)
@@ -980,7 +979,6 @@ class PosOrder(models.Model):
         return not self.session_id.update_stock_at_closing or (self.company_id.anglo_saxon_accounting and self.to_invoice)
 
     def _create_order_picking(self):
-        print("triggered create_order_picking")
         self.ensure_one()
         if self.to_ship:
             self.lines._launch_stock_rule_from_pos_order_lines()
