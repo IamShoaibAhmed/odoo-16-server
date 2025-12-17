@@ -1788,7 +1788,10 @@ class Orderline extends PosModel {
         this.full_product_name = options.description || '';
         this.id = orderline_id++;
         this.customerNote = this.customerNote || '';
+        this.salesperson_name = '';  // New property
         this.user_id = options.user_id || false; // Initialize user_id
+        this.set_salesperson(this.user_id);  // Add this line
+
         this.served_by = options.served_by || false; // Initialize served_by
         if (options.price) {
             this.set_unit_price(options.price);
@@ -1821,7 +1824,9 @@ class Orderline extends PosModel {
         this.price_manually_set = json.price_manually_set ||
             this.get_display_price() !==
             this.product.get_display_price_discount(this.order.pricelist, this.get_quantity(), this.get_discount());
-        this.user_id = json.user_id || false; // Load user_id from JSON
+        this.user_id = json.user_id || false;
+        this.set_salesperson(this.user_id);
+        this.salesperson_name = json.salesperson_name || ''; // Load user_id from JSON
         this.served_by = json.served_by || false; // Load served_by from JSON
     }
     clone(){
@@ -2122,12 +2127,17 @@ class Orderline extends PosModel {
             refunded_orderline_id: this.refunded_orderline_id,
             price_manually_set: this.price_manually_set,
             price_automatically_set: this.price_automatically_set,
+            salesperson_name: this.salesperson_name,
         };
     }
     //used to create a json of the ticket, to be sent to the printer
     export_for_printing(){
         const user_id = this.user_id && this.pos.db.get_employee_by_id ? this.pos.db.get_employee_by_id(this.user_id) : null;
         const servedBy = this.served_by && this.pos.db.get_employee_by_id ? this.pos.db.get_employee_by_id(this.served_by) : null;
+
+        const employee = user_id && this.pos.db.get_employee_by_id
+            ? this.pos.db.get_employee_by_id(user_id)
+            : null;
 
         return {
             id: this.id,
@@ -2156,7 +2166,9 @@ class Orderline extends PosModel {
             customer_note:      this.get_customer_note(),
             taxed_lst_unit_price: this.get_taxed_lst_unit_price(),
             unitDisplayPriceBeforeDiscount: this.getUnitDisplayPriceBeforeDiscount(),
-            salesperson_name: user_id ? user_id.name : (this.user_id || ''), // Add salesperson name or ID
+            //salesperson_name: user_id ? user_id.name : (this.user_id || ''), // Add salesperson name or ID
+            user_id: this.user_id,
+            salesperson_name: this.salesperson_name || 'TEST NAME',
             served_by_name: servedBy ? servedBy.name : (this.served_by || '') // Add served by name or ID
         };
     }
@@ -2392,6 +2404,16 @@ class Orderline extends PosModel {
     }
     set_customer_note(note) {
         this.customerNote = note;
+    }
+    set_salesperson(user_id) {
+        this.user_id = user_id || false;
+        console.log('>>> this.user_id set to:', this.user_id);
+
+        const employee = user_id ? this.pos.db.get_employee_by_id(user_id) : null;
+        console.log('>>> employee set to:', employee);
+        this.salesperson_name = employee ? employee.name : (user_id ? String(user_id) : '');
+        // DO NOT call this.trigger('change', this);
+        // The UI updates automatically when the property changes because Orderline is observed
     }
     get_customer_note() {
         return this.customerNote;
@@ -2830,6 +2852,7 @@ class Order extends PosModel {
             partner: partner ? partner : null ,
             invoice_id: null,   //TODO
             cashier: cashier ? cashier.name : null,
+            salesperson_name: orderlines[0].salesperson_name || 'T NAME',
             precision: {
                 price: 2,
                 money: 2,
