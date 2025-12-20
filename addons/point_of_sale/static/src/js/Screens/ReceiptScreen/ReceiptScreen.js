@@ -112,7 +112,6 @@ odoo.define('point_of_sale.ReceiptScreen', function (require) {
                 if (this.env.pos.config.iface_customer_facing_display) {
                     this.env.pos.send_current_order_to_customer_facing_display();
                 }
-                window.location.reload();
             }
             async printReceipt() {
                 const currentOrder = this.currentOrder;
