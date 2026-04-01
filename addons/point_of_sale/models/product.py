@@ -113,12 +113,13 @@ class ProductProduct(models.Model):
         for line in order_data:
             product = self.browse(line['product_id'])
             available_qty = product.with_context(location=location.id).qty_available
-            if line['qty'] > available_qty:
-                insufficient_products.append({
-                    'product_name': product.display_name,
-                    'requested_qty': line['qty'],
-                    'available_qty': available_qty
-                })
+            if product.detailed_type == 'product':
+                if line['qty'] > available_qty:
+                    insufficient_products.append({
+                        'product_name': product.display_name,
+                        'requested_qty': line['qty'],
+                        'available_qty': available_qty
+                    })
 
         return insufficient_products
 
