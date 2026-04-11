@@ -1591,6 +1591,20 @@ class PosSession(models.Model):
         for model in self._pos_ui_models_to_load():
             loaded_data[model] = self._load_model(model)
         self._pos_data_process(loaded_data)
+        # Get the correct location for this POS / Outlet
+        location = self.config_id.picking_type_id.default_location_src_id
+        if not location or 'product.product' not in loaded_data:
+            return loaded_data
+
+        # Filter products that have stock > 0 in this specific location
+        valid_products = []
+        for product in loaded_data['product.product']:
+            # qty_available is already computed with the location context from _loader_params
+            if product.get('qty_available', 0) > 0:
+                valid_products.append(product)
+
+        loaded_data['product.product'] = valid_products
+
         return loaded_data
 
     def _get_attributes_by_ptal_id(self):
@@ -1954,14 +1968,35 @@ class PosSession(models.Model):
         return self.env['pos.category'].search_read(**params['search_params'])
 
     def _loader_params_product_product(self):
+        # === Original Odoo domain (unchanged) ===
         domain = [
             '&', '&', ('sale_ok', '=', True), ('available_in_pos', '=', True), '|',
             ('company_id', '=', self.config_id.company_id.id), ('company_id', '=', False)
         ]
+
         if self.config_id.limit_categories and self.config_id.iface_available_categ_ids:
             domain = AND([domain, [('pos_categ_id', 'in', self.config_id.iface_available_categ_ids.ids)]])
+
         if self.config_id.iface_tipproduct:
-            domain = OR([domain, [('id', '=', self.config_id.tip_product_id.id)]])
+            domain = AND([domain, [('id', '=', self.config_id.tip_product_id.id)]])
+
+        # === Your Requirement: Use the specific outlet/location ===
+        location = self.config_id.picking_type_id.default_location_src_id
+
+        if location:
+            # 1. Pass the location into context
+            #    → This makes qty_available calculate ONLY from this outlet's location
+            context = {
+                'display_default_code': False,
+                'location': location.id,          # Important
+            }
+
+            # 2. Filter products that actually have stock > 0 in this location
+            domain = AND([domain, [('qty_available', '>', 0)]])
+
+        else:
+            # Fallback (rare case)
+            context = {'display_default_code': False}
 
         return {
             'search_params': {
@@ -1973,9 +2008,8 @@ class PosSession(models.Model):
                 ],
                 'order': 'sequence,default_code,name',
             },
-            'context': {'display_default_code': False},
+            'context': context,
         }
-
     def _process_pos_ui_product_product(self, products):
         """
         Modify the list of products to add the categories as well as adapt the lst_price

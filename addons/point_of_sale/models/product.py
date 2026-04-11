@@ -162,6 +162,46 @@ class ProductProduct(models.Model):
 
         return expired_errors
 
+    # added by shoaib
+    @api.model
+    def _get_pos_products_with_valid_stock(self, products, config_id):
+        """Filter products after they are loaded by POS.
+        This is called from JS or you can hook it differently.
+        But for pure _loader_params override, we need JS help.
+        """
+        if not products:
+            return products
+
+        config = self.env['pos.config'].browse(config_id)
+        location = config.picking_type_id.default_location_src_id
+        if not location:
+            return products
+
+        today = fields.Date.context_today(self)
+        valid_products = self.env['product.product']
+
+        for product in products:
+            if product.detailed_type != 'product':
+                valid_products |= product
+                continue
+
+            available_qty = product.with_context(location=location.id).qty_available
+
+            # Expired batches logic (same as your check_expired_stock_before_payment)
+            expired_batches = self.env['product.batch'].search([
+                ('product_id', '=', product.id),
+                ('location_id', '=', location.id),
+                ('expiry_date', '<=', today),
+                ('active', '=', False)
+            ])
+            expired_qty = sum(batch.qty for batch in expired_batches)
+
+            valid_qty = max(available_qty - expired_qty, 0)
+
+            if valid_qty > 0:
+                valid_products |= product
+
+        return valid_products
 
 class UomCateg(models.Model):
     _inherit = 'uom.category'
