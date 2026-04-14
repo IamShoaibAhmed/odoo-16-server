@@ -1967,8 +1967,51 @@ class PosSession(models.Model):
     def _get_pos_ui_pos_category(self, params):
         return self.env['pos.category'].search_read(**params['search_params'])
 
+    # def _loader_params_product_product(self):
+    #     # === Original Odoo domain (unchanged) ===
+    #     domain = [
+    #         '&', '&', ('sale_ok', '=', True), ('available_in_pos', '=', True), '|',
+    #         ('company_id', '=', self.config_id.company_id.id), ('company_id', '=', False)
+    #     ]
+    #
+    #     if self.config_id.limit_categories and self.config_id.iface_available_categ_ids:
+    #         domain = AND([domain, [('pos_categ_id', 'in', self.config_id.iface_available_categ_ids.ids)]])
+    #
+    #     if self.config_id.iface_tipproduct:
+    #         domain = AND([domain, [('id', '=', self.config_id.tip_product_id.id)]])
+    #
+    #     # === Your Requirement: Use the specific outlet/location ===
+    #     location = self.config_id.picking_type_id.default_location_src_id
+    #
+    #     if location:
+    #         # 1. Pass the location into context
+    #         #    → This makes qty_available calculate ONLY from this outlet's location
+    #         context = {
+    #             'display_default_code': False,
+    #             'location': location.id,          # Important
+    #         }
+    #
+    #         # 2. Filter products that actually have stock > 0 in this location
+    #         domain = AND([domain, [('qty_available', '>', 0)]])
+    #
+    #     else:
+    #         # Fallback (rare case)
+    #         context = {'display_default_code': False}
+    #
+    #     return {
+    #         'search_params': {
+    #             'domain': domain,
+    #             'fields': [
+    #                 'display_name', 'lst_price', 'standard_price', 'categ_id', 'pos_categ_id', 'taxes_id', 'barcode',
+    #                 'default_code', 'to_weight', 'uom_id', 'description_sale', 'description', 'product_tmpl_id', 'tracking',
+    #                 'available_in_pos', 'attribute_line_ids', 'active', '__last_update', 'image_128'
+    #             ],
+    #             'order': 'sequence,default_code,name',
+    #         },
+    #         'context': context,
+    #     }
+
     def _loader_params_product_product(self):
-        # === Original Odoo domain (unchanged) ===
         domain = [
             '&', '&', ('sale_ok', '=', True), ('available_in_pos', '=', True), '|',
             ('company_id', '=', self.config_id.company_id.id), ('company_id', '=', False)
@@ -1980,36 +2023,58 @@ class PosSession(models.Model):
         if self.config_id.iface_tipproduct:
             domain = AND([domain, [('id', '=', self.config_id.tip_product_id.id)]])
 
-        # === Your Requirement: Use the specific outlet/location ===
         location = self.config_id.picking_type_id.default_location_src_id
 
         if location:
-            # 1. Pass the location into context
-            #    → This makes qty_available calculate ONLY from this outlet's location
+            today = fields.Date.context_today(self)
+
             context = {
                 'display_default_code': False,
-                'location': location.id,          # Important
+                'location': location.id,
             }
 
-            # 2. Filter products that actually have stock > 0 in this location
+            # Filter products that have some physical stock in this location
             domain = AND([domain, [('qty_available', '>', 0)]])
 
+            # === NEW: Exclude products where ALL stock is expired ===
+            # This is a bit tricky in pure domain, so we use a helper
+            # Alternative: Use a search on product.batch first to get candidate product_ids
+
+            # Get all products that have at least one NON-expired batch with qty > 0 in this location
+            non_expired_products = self.env['product.batch'].search([
+                ('product_id', '!=', False),
+                ('location_id', '=', location.id),
+                ('expiry_date', '>', today),  # Not expired
+                ('qty', '>', 0),
+                ('active', '=', True),  # Adjust if your active logic differs
+            ]).mapped('product_id.id')
+
+            if non_expired_products:
+                domain = AND([domain, [('id', 'in', non_expired_products)]])
+            else:
+                # If no non-expired batches at all, don't load any (or fallback)
+                domain = AND([domain, [('id', '=', 0)]])
+
         else:
-            # Fallback (rare case)
             context = {'display_default_code': False}
 
         return {
             'search_params': {
                 'domain': domain,
                 'fields': [
-                    'display_name', 'lst_price', 'standard_price', 'categ_id', 'pos_categ_id', 'taxes_id', 'barcode',
-                    'default_code', 'to_weight', 'uom_id', 'description_sale', 'description', 'product_tmpl_id', 'tracking',
+                    'display_name', 'lst_price', 'standard_price', 'categ_id', 'pos_categ_id',
+                    'taxes_id', 'barcode', 'default_code', 'to_weight', 'uom_id',
+                    'description_sale', 'description', 'product_tmpl_id', 'tracking',
                     'available_in_pos', 'attribute_line_ids', 'active', '__last_update', 'image_128'
                 ],
                 'order': 'sequence,default_code,name',
             },
             'context': context,
         }
+
+
+
+
     def _process_pos_ui_product_product(self, products):
         """
         Modify the list of products to add the categories as well as adapt the lst_price

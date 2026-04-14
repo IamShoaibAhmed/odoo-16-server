@@ -135,7 +135,9 @@ class ProductProduct(models.Model):
 
         for item in order_data:
             product = self.browse(item['product_id'])
-            if product.detailed_type =='product':
+            if (product.detailed_type == 'product'
+                    and not product.name.lower().startswith('discount')
+                    and 'discount' not in product.name.lower()):
                 ordered_qty = item['qty']
 
                 # Get expired batches: expiry_date <= today
