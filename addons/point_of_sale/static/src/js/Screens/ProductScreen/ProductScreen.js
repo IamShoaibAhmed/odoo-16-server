@@ -180,8 +180,17 @@ odoo.define('point_of_sale.ProductScreen', function(require) {
                 }
             };
         }
+        // modified by shoaib
         async _addProduct(product, options) {
             this.currentOrder.add_product(product, options);
+
+            // ==================== FORCE CLEAR SEARCH ====================
+            // This is the correct way to clear search in Odoo 16 POS
+            this.trigger('clear-search');           // for older widget style
+            if (this.env && this.env.bus) {
+                this.env.bus.trigger('clear-search');   // for newer OWL bus style
+            }
+            // ===========================================================
         }
         // modified by shoaib
         async _clickProduct(event) {
@@ -214,6 +223,14 @@ odoo.define('point_of_sale.ProductScreen', function(require) {
             // Add the product after having the extra information.
             await this._addProduct(product, options);
             NumberBuffer.reset();
+
+            // ==================== ADD THIS LINE ====================
+            // Force clear the search every time a product is successfully added
+            this.trigger('clear-search');
+            if (this.env && this.env.bus) {
+                this.env.bus.trigger('clear-search');
+            }
+            // =======================================================
         }
 
         _setNumpadMode(event) {

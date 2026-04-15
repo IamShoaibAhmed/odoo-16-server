@@ -933,6 +933,7 @@ class PosSession(models.Model):
             self._apply_diff_on_account_payment_move(account_payment, payment_method, diff_amount)
 
         account_payment.action_post()
+        print(f"\n\n******************\n {account_payment.move_id}")
         return account_payment.move_id.line_ids.filtered(lambda line: line.account_id == account_payment.destination_account_id)
 
     def _apply_diff_on_account_payment_move(self, account_payment, payment_method, diff_amount):
@@ -973,6 +974,7 @@ class PosSession(models.Model):
             'pos_session_id': self.id,
         })
         account_payment.action_post()
+        print(f"\n\n******************\n 2. {account_payment.move_id}")
         return account_payment.move_id.line_ids.filtered(lambda line: line.account_id == account_payment.destination_account_id)
 
     def _create_cash_statement_lines_and_cash_move_lines(self, data):

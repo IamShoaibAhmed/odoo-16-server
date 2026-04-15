@@ -28,6 +28,7 @@
                             <field name="receivable_account_id" groups="account.group_account_readonly"
                                    attrs="{'invisible': [('split_transactions', '=', True)]}"
                                    placeholder="Leave empty to use the default account from the company setting"/>
+                            <field name="bank_charge_account" required="1"/>
                             <field name="company_id" readonly="1" groups="base.group_multi_company"/>
                         </group>
                         <group attrs="{'invisible': ['|', ('hide_use_payment_terminal', '=', False), ('type', 'in', ['cash', 'pay_later'])]}">

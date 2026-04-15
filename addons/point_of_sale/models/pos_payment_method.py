@@ -45,6 +45,8 @@ class PosPaymentMethod(models.Model):
     active = fields.Boolean(default=True)
     type = fields.Selection(selection=[('cash', 'Cash'), ('bank', 'Bank'), ('pay_later', 'Customer Account')], compute="_compute_type")
     # added by shoaib
+
+    bank_charge_account = fields.Many2one('account.account', string='Bank Charge Account')
     bank_fee_type = fields.Selection([
         ('fixed', 'Fixed'),
         ('percent', 'Percentage')
