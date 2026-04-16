@@ -25,7 +25,29 @@ class MrpImmediateProduction(models.TransientModel):
         if 'immediate_production_line_ids' in fields:
             if self.env.context.get('default_mo_ids'):
                 res['mo_ids'] = self.env.context['default_mo_ids']
-                res['immediate_production_line_ids'] = [(0, 0, {'to_immediate': True, 'production_id': mo_id[1]}) for mo_id in res['mo_ids']]
+                #by shoaib
+                immediate_lines = []
+
+                for mo_tuple in res.get('mo_ids', []):
+                    # mo_tuple is usually (0, 0, {'production_id': id}) or just the id in some contexts
+                    mo_id = mo_tuple[1] if isinstance(mo_tuple, (list, tuple)) and len(mo_tuple) > 1 else mo_tuple
+
+                    mo = self.env['mrp.production'].browse(mo_id)
+
+                    if mo.components_availability == 'Available':
+                        immediate_lines.append((0, 0, {
+                            'to_immediate': True,  # Start production immediately
+                            'production_id': mo.id,
+                        }))
+                    else:
+                        # Still show the line but do NOT mark it for immediate production
+                        immediate_lines.append((0, 0, {
+                            'to_immediate': False,
+                            'production_id': mo.id,
+                        }))
+
+                res['immediate_production_line_ids'] = immediate_lines
+                # res['immediate_production_line_ids'] = [(0, 0, {'to_immediate': True, 'production_id': mo_id[1]}) for mo_id in res['mo_ids']]
         return res
 
     mo_ids = fields.Many2many('mrp.production', 'mrp_production_production_rel')

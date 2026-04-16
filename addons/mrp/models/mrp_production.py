@@ -1864,14 +1864,18 @@ class MrpProduction(models.Model):
         self.workorder_ids._action_confirm()
 
     def button_mark_done(self):
-        self._button_mark_done_sanity_checks()
+        self._button_mark_done_sanity_checks()  # This now includes our filter
 
+        if not self:  # All were skipped
+            return True  # or return a notification
+
+        # Then continue with the rest of your original code...
         if not self.env.context.get('button_mark_done_production_ids'):
             self = self.with_context(button_mark_done_production_ids=self.ids)
+
         res = self._pre_button_mark_done()
         if res is not True:
             return res
-
         if self.env.context.get('mo_ids_to_backorder'):
             productions_to_backorder = self.browse(self.env.context['mo_ids_to_backorder'])
             productions_not_to_backorder = self - productions_to_backorder
@@ -1970,6 +1974,44 @@ class MrpProduction(models.Model):
         self._check_company()
         for order in self:
             order._check_sn_uniqueness()
+        if len(self) > 1 or self.env.context.get('button_mark_done_production_ids'):
+            self = self._filter_mos_with_available_components()
+
+    def _filter_mos_with_available_components(self):
+        """Filter out MOs where any raw material is not fully available.
+        Returns the filtered recordset and raises warning for skipped ones.
+        """
+        productions_to_process = self.env['mrp.production']
+        skipped = []
+
+        for production in self:
+            # Check if all raw moves can be fully reserved/available
+            # We use the same logic Odoo uses internally for "Check Availability"
+            can_produce = True
+            for move in production.move_raw_ids:
+                if move.state in ('done', 'cancel'):
+                    continue
+                if move.product_uom_qty > 0:
+                    # Check available quantity in the source location
+                    available = move.product_id.with_context(
+                        location=move.location_id.id
+                    ).qty_available
+                    if available < move.product_uom_qty:
+                        can_produce = False
+                        break
+
+            if can_produce:
+                productions_to_process |= production
+            else:
+                skipped.append(production.name or production.product_id.display_name)
+
+        if skipped:
+            message = _(
+                "The following Manufacturing Orders were skipped because some raw materials are not available:\n") + "\n".join(
+                skipped)
+
+
+        return productions_to_process
 
     def do_unreserve(self):
         self.move_raw_ids.filtered(lambda x: x.state not in ('done', 'cancel'))._do_unreserve()
