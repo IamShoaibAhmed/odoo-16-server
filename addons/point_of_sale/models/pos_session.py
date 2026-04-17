@@ -1606,7 +1606,7 @@ class PosSession(models.Model):
                 valid_products.append(product)
 
         loaded_data['product.product'] = valid_products
-
+        # SHOAIB AHMED SHIFO
         return loaded_data
 
     def _get_attributes_by_ptal_id(self):
