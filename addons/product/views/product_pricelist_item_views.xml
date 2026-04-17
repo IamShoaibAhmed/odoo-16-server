@@ -109,6 +109,7 @@
                             <field name="fixed_price" widget="monetary"
                                 attrs="{'invisible': [('compute_price', '!=', 'fixed')]}"
                                 options="{'field_digits': True}"/>
+                                options="{'field_digits': True}"/>
                             <label for="percent_price" string="Discount" attrs="{'invisible':[('compute_price', '!=', 'percentage')]}"/>
                             <div class="o_row" attrs="{'invisible':[('compute_price', '!=', 'percentage')]}">
                                 <field name="percent_price" class="oe_inline" attrs="{'invisible':[('compute_price', '!=', 'percentage')]}"/>%

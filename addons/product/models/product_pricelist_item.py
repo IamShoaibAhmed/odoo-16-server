@@ -65,12 +65,12 @@ class PricelistItem(models.Model):
     product_tmpl_id = fields.Many2one(
         comodel_name='product.template',
         string="Product",
-        ondelete='cascade', check_company=True,
+        ondelete='cascade',
         help="Specify a template if this rule only applies to one product template. Keep empty otherwise.")
     product_id = fields.Many2one(
         comodel_name='product.product',
         string="Product Variant",
-        ondelete='cascade', check_company=True,
+        ondelete='cascade',
         help="Specify a product if this rule only applies to one product. Keep empty otherwise.")
 
     base = fields.Selection(
