@@ -10,7 +10,8 @@
                         <div class="breadcrumbs">
                             <span class="breadcrumb">
                                 <span class="breadcrumb-button breadcrumb-home" t-on-click="() => this.trigger('switch-category', 0)">
-                                    <i class="fa fa-home" role="img" aria-label="Home" title="Home"></i>
+<!--                                    <i class="fa fa-home" role="img" aria-label="Home" title="Home"></i>-->
+                                    <i class="fa fa-home search-clear-partner" t-on-click="_clearSearch" aria-label="Home" title="Home"/>
                                 </span>
                             </span>
                             <t t-foreach="props.breadcrumbs" t-as="category" t-key="category.id">
