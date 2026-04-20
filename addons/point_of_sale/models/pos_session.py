@@ -1593,10 +1593,13 @@ class PosSession(models.Model):
         for model in self._pos_ui_models_to_load():
             loaded_data[model] = self._load_model(model)
         self._pos_data_process(loaded_data)
+
         # Get the correct location for this POS / Outlet
         location = self.config_id.picking_type_id.default_location_src_id
         if not location or 'product.product' not in loaded_data:
             return loaded_data
+
+        this_session_outlet_location = location  # renamed for clarity
 
         # Filter products that have stock > 0 in this specific location
         valid_products = []
@@ -1605,8 +1608,26 @@ class PosSession(models.Model):
             if product.get('qty_available', 0) > 0:
                 valid_products.append(product)
 
-        loaded_data['product.product'] = valid_products
+        # === NEW LOGIC: Further filter using product.batch ===
+        final_valid_products = []
+
+        for product in valid_products:
+            # Search for batches linked to this product + location + active=True
+            batches = self.env['product.batch'].search([
+                ('product_id', '=', product['id']),  # assuming product dict has 'id'
+                ('location_id', '=', this_session_outlet_location.id),
+                ('active', '=', True),
+            ])
+
+            if batches:  # at least one active batch exists for this location
+                final_valid_products.append(product)
+            # else: skip the product (no active batch in this outlet location)
+
+        loaded_data['product.product'] = final_valid_products
+
+        print(f"\n\n Final valid products after batch check: {final_valid_products}")
         # SHOAIB AHMED SHIFO
+
         return loaded_data
 
     def _get_attributes_by_ptal_id(self):
