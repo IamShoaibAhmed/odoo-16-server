@@ -1594,39 +1594,82 @@ class PosSession(models.Model):
             loaded_data[model] = self._load_model(model)
         self._pos_data_process(loaded_data)
 
-        # Get the correct location for this POS / Outlet
         location = self.config_id.picking_type_id.default_location_src_id
         if not location or 'product.product' not in loaded_data:
             return loaded_data
 
-        this_session_outlet_location = location  # renamed for clarity
+        this_session_outlet_location = location
 
-        # Filter products that have stock > 0 in this specific location
-        valid_products = []
-        for product in loaded_data['product.product']:
-            # qty_available is already computed with the location context from _loader_params
-            if product.get('qty_available', 0) > 0:
-                valid_products.append(product)
+        # Get the ID of the discount product set in POS config to ensure it's never filtered out
+        discount_product_id = self.config_id.module_pos_discount and self.config_id.discount_product_id.id
 
-        # === NEW LOGIC: Further filter using product.batch ===
         final_valid_products = []
-
-        for product in valid_products:
-            # Search for batches linked to this product + location + active=True
-            batches = self.env['product.batch'].search([
-                ('product_id', '=', product['id']),  # assuming product dict has 'id'
-                ('location_id', '=', this_session_outlet_location.id),
-                ('active', '=', True),
-            ])
-
-            if batches:  # at least one active batch exists for this location
+        for product in loaded_data['product.product']:
+            # 1. ALWAYS include the Discount Product
+            if discount_product_id and product['id'] == discount_product_id:
                 final_valid_products.append(product)
-            # else: skip the product (no active batch in this outlet location)
+                continue
+
+            # 2. ALWAYS include Service products (usually don't have stock/batches)
+            # Note: 'type' must be in your product loader params for this to work
+            if product.get('type') == 'service':
+                final_valid_products.append(product)
+                continue
+
+            # 3. Apply your custom Stock & Batch logic for physical goods
+            if product.get('qty_available', 0) > 0:
+                batches = self.env['product.batch'].search([
+                    ('product_id', '=', product['id']),
+                    ('location_id', '=', this_session_outlet_location.id),
+                    ('active', '=', True),
+                ])
+                if batches:
+                    final_valid_products.append(product)
 
         loaded_data['product.product'] = final_valid_products
-        # SHOAIB AHMED SHIFO
-
         return loaded_data
+
+    # def load_pos_data(self):
+    #     loaded_data = {}
+    #     self = self.with_context(loaded_data=loaded_data)
+    #     for model in self._pos_ui_models_to_load():
+    #         loaded_data[model] = self._load_model(model)
+    #     self._pos_data_process(loaded_data)
+    #
+    #     # Get the correct location for this POS / Outlet
+    #     location = self.config_id.picking_type_id.default_location_src_id
+    #     if not location or 'product.product' not in loaded_data:
+    #         return loaded_data
+    #
+    #     this_session_outlet_location = location  # renamed for clarity
+    #
+    #     # Filter products that have stock > 0 in this specific location
+    #     valid_products = []
+    #     for product in loaded_data['product.product']:
+    #
+    #         # qty_available is already computed with the location context from _loader_params
+    #         if product.get('qty_available', 0) > 0:
+    #             valid_products.append(product)
+    #
+    #     # === NEW LOGIC: Further filter using product.batch ===
+    #     final_valid_products = []
+    #
+    #     for product in valid_products:
+    #         # Search for batches linked to this product + location + active=True
+    #         batches = self.env['product.batch'].search([
+    #             ('product_id', '=', product['id']),  # assuming product dict has 'id'
+    #             ('location_id', '=', this_session_outlet_location.id),
+    #             ('active', '=', True),
+    #         ])
+    #
+    #         if batches:  # at least one active batch exists for this location
+    #             final_valid_products.append(product)
+    #         # else: skip the product (no active batch in this outlet location)
+    #
+    #     loaded_data['product.product'] = final_valid_products
+    #     # SHOAIB AHMED SHIFO
+    #
+    #     return loaded_data
 
     def _get_attributes_by_ptal_id(self):
         product_attributes = self.env['product.attribute'].search([('create_variant', '=', 'no_variant')])
