@@ -1604,27 +1604,33 @@ class PosSession(models.Model):
         discount_product_id = self.config_id.module_pos_discount and self.config_id.discount_product_id.id
 
         final_valid_products = []
+
         for product in loaded_data['product.product']:
-            # 1. ALWAYS include the Discount Product
+
+            # 1. Always include discount product
             if discount_product_id and product['id'] == discount_product_id:
                 final_valid_products.append(product)
                 continue
 
-            # 2. ALWAYS include Service products (usually don't have stock/batches)
-            # Note: 'type' must be in your product loader params for this to work
+            # 2. Always include services
             if product.get('type') == 'service':
                 final_valid_products.append(product)
                 continue
 
-            # 3. Apply your custom Stock & Batch logic for physical goods
-            if product.get('qty_available', 0) > 0:
-                batches = self.env['product.batch'].search([
-                    ('product_id', '=', product['id']),
-                    ('location_id', '=', this_session_outlet_location.id),
-                    ('active', '=', True),
-                ])
-                if batches:
-                    final_valid_products.append(product)
+            # 3. Get ONLY ACTIVE batch quantity
+            batches = self.env['product.batch'].search([
+                ('product_id', '=', product['id']),
+                ('location_id', '=', this_session_outlet_location.id),
+                ('active', '=', True),
+            ])
+
+            valid_qty = sum(batches.mapped('qty'))
+
+            # 🚀 Override qty_available
+            product['qty_available'] = valid_qty
+
+            if valid_qty > 0:
+                final_valid_products.append(product)
 
         loaded_data['product.product'] = final_valid_products
         return loaded_data
