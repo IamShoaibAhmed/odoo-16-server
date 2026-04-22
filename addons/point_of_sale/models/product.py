@@ -135,30 +135,30 @@ class ProductProduct(models.Model):
 
         for item in order_data:
             product = self.browse(item['product_id'])
+            if product.detailed_type == 'product':
+                ordered_qty = item['qty']
 
-            ordered_qty = item['qty']
+                # Get expired batches: expiry_date <= today
+                expired_batches = self.env['product.batch'].search([
+                    ('product_id', '=', product.id),
+                    ('location_id', '=', location.id),
+                    ('expiry_date', '<=', today),
+                    ('active','=', False)
+                ])
 
-            # Get expired batches: expiry_date <= today
-            expired_batches = self.env['product.batch'].search([
-                ('product_id', '=', product.id),
-                ('location_id', '=', location.id),
-                ('expiry_date', '<=', today),
-                ('active','=', False)
-            ])
+                expired_qty = sum(batch.qty for batch in expired_batches)
 
-            expired_qty = sum(batch.qty for batch in expired_batches)
+                # total valid qty = total available - expired
+                available_qty = product.with_context(location=location.id).qty_available
+                valid_qty = available_qty - expired_qty
 
-            # total valid qty = total available - expired
-            available_qty = product.with_context(location=location.id).qty_available
-            valid_qty = available_qty - expired_qty
-
-            if valid_qty <= 0 or ordered_qty > valid_qty:
-                expired_errors.append({
-                    'product_name': product.display_name,
-                    'ordered_qty': ordered_qty,
-                    'expired_qty': expired_qty,
-                    'valid_qty': max(valid_qty, 0),
-                })
+                if valid_qty <= 0 or ordered_qty > valid_qty:
+                    expired_errors.append({
+                        'product_name': product.display_name,
+                        'ordered_qty': ordered_qty,
+                        'expired_qty': expired_qty,
+                        'valid_qty': max(valid_qty, 0),
+                    })
 
         return expired_errors
 
