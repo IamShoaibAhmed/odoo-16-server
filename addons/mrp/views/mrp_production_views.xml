@@ -37,7 +37,7 @@
                     <field name="product_uom_id" string="UoM" readonly="1" options="{'no_open':True,'no_create':True}" groups="uom.group_uom" optional="show"/>
                     <field name="production_duration_expected" attrs="{'invisible': [('production_duration_expected', '=', 0)]}" groups="mrp.group_mrp_routings" widget="float_time" sum="Total expected duration" optional="show"/>
                     <field name="production_real_duration" attrs="{'invisible': [('production_real_duration', '=', 0)]}" groups="mrp.group_mrp_routings" widget="float_time" sum="Total real duration" optional="show"/>
-                    <field name="company_id" readonly="1" groups="base.group_multi_company" optional="show"/>
+                    <field name="company_id" readonly="1" optional="hide"/>
                     <field name="state"
                            decoration-success="state in ('done', 'to_close')"
                            decoration-warning="state == 'progress'"
