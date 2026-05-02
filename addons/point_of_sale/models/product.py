@@ -149,14 +149,19 @@ class ProductProduct(models.Model):
                 expired_qty = sum(batch.qty for batch in expired_batches)
 
                 # total valid qty = total available - expired
-                available_qty = product.with_context(location=location.id).qty_available
-                valid_qty = available_qty - expired_qty
+                batches = self.env['product.batch'].search([
+                    ('product_id', '=', product['id']),
+                    ('location_id', '=', location.id),
+                    ('active', '=', True),
+                ])
+
+                valid_qty = sum(batches.mapped('qty'))
 
                 if valid_qty <= 0 or ordered_qty > valid_qty:
                     expired_errors.append({
                         'product_name': product.display_name,
                         'ordered_qty': ordered_qty,
-                        'expired_qty': expired_qty,
+                        'expired_qty': ordered_qty,
                         'valid_qty': max(valid_qty, 0),
                     })
 
